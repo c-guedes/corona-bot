@@ -4,7 +4,7 @@ import json
 import requests
 from random import randint
 
-bot = telepot.Bot('1038974643:AAFFHU_zaLMSqtYlGuhJkzcdP-y1Mhuvwcg')
+bot = telepot.Bot('KEY_HERE')
 
 
 def makeRequest(lugar):
