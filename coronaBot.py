@@ -4,8 +4,10 @@ import json
 import requests
 import unicodedata
 import re
+import flag
 import urllib.request
 from random import randint
+from operator import itemgetter
 
 bot = telepot.Bot('')
 
@@ -16,12 +18,14 @@ class JsonToObject(object):
 def makeRequest(lugar):
     return requests.get("https://corona.lmao.ninja/countries/"+lugar).json()
 
+def requestAll():
+    return requests.get("https://corona.lmao.ninja/countries/").json()
 
 def globalCovid(obj):
     text = json.dumps(obj, sort_keys=True, indent=4)
     response = JsonToObject(text)
     try:
-        formatado = "Casos Totais: {cases}\nCasos Suspeitos: {suspect}\nMortes: {deaths}\nRecuperados: {recovered}\nCasos descobertos hoje: {today}\nMortes Hoje: {deathsToday}".format(cases=response.active, suspect=response.cases, deaths=response.deaths, recovered=response.recovered, today=response.todayCases, deathsToday= response.todayDeaths)
+        formatado = "Casos: {suspect}\nCasos Ativos: {cases}\nRecuperados: {recovered}\nMortes: {deaths}\nCasos descobertos hoje: {today}\nMortes Hoje: {deathsToday}".format(cases=response.active, suspect=response.cases, deaths=response.deaths, recovered=response.recovered, today=response.todayCases, deathsToday= response.todayDeaths)
         return response.countryInfo['flag'], formatado
     except: pass
 
@@ -36,20 +40,30 @@ def searchCountry(lugar):
     for index in range(len(obj)):
         searchedCountry = removerAcentosECaracteresEspeciais(obj[index]['properties']['estado_geo'])
         toSearch = removerAcentosECaracteresEspeciais(lugar)
+        splitted = searchedCountry.split(" ")
+        splittedSize = len(splitted)
+        if len(splitted) > 1:
+            joined = " ".join(splitted[0:splittedSize-1]).lower()
+            if toSearch.lower() == joined or toSearch.lower() == splitted[splittedSize-1].lower():
+                response = obj[index]['properties']
+                estadoSplitado = response["estado_geo"].split(" ")
+                estado = " ".join(estadoSplitado[0:len(estadoSplitado)-1]).lower()
+                return "Casos Confirmados: {confirmedCases}\nMortes: {deaths}".format(confirmedCases=int(response['casosconfirmados']), deaths=response['obitos']), estado
+            
         if(toSearch.title() in searchedCountry):
             response = obj[index]['properties']
-            return "Casos Totais: {totalCases}\nCasos Confirmados: {confirmedCases}Casos Suspeitos: {suspect}\nMortes: {deaths}".format(confirmedCases=response['casosconfirmados'], totalCases= response['total'],suspect=response['casossuspeitos'], deaths=response['obitos'])
-                
+            return "Casos Confirmados: {confirmedCases}\nMortes: {deaths}".format(confirmedCases=int(response['casosconfirmados']), deaths=response['obitos'])
+    
 def removerAcentosECaracteresEspeciais(palavra):
     nfkd = unicodedata.normalize('NFKD', palavra)
     palavraSemAcento = u"".join([c for c in nfkd if not unicodedata.combining(c)])
     return re.sub('[^a-zA-Z0-9 \\\]', '', palavraSemAcento)
 
 def getFlag(province):
-    if province == "sao paulo":
+    if province in ["sao paulo","são paulo", "São Paulo", "São paulo"]:
         return"https://www.estadosecapitaisdobrasil.com/wp-content/uploads/2014/09/bandeira-{provinceName}1-300x200.png?x64851".format(provinceName=province.replace(" ","-").lower())
     else:
-        print(province.replace(" ","-").lower())
+
         return"https://www.estadosecapitaisdobrasil.com/wp-content/uploads/2014/09/bandeira-{provinceName}-300x210.png?x64851".format(provinceName=province.replace(" ","-").lower())
     #return "https://www.enemvirtual.com.br/uploadedfiles/uploads/2011/07/bandeira_{provinceName}.gif".format(provinceName=province.replace(" ","_"))
 
@@ -79,8 +93,12 @@ def handle(msg):
     if content_type == 'text':
         received = re.sub("\s\s+", " ",msg['text'].strip())
         splittedMsg = received.split(' ')
+        if received == "/help":
+            send = "/covid country - for global covid\n/covidbr state - for brazilian states\n/r number - to rank countries"
+            bot.sendMessage(chat_id, send)
+            
         if received == "/help@corona4allbot":
-            send = "/covid country - for global covid\n/covidbr state - for brazilian states"
+            send = "/covid country - for global covid\n/covidbr state - for brazilian states\n/r number - to rank countries"
             bot.sendMessage(chat_id, send)
             
         if received == "/start":
@@ -98,16 +116,40 @@ def handle(msg):
                 
         if splittedMsg[0] == "/covidbr":
             country = " ".join(splittedMsg[1:])
-            flag = getFlag(removerAcentosECaracteresEspeciais(country))
+            #flag = getFlag(removerAcentosECaracteresEspeciais(country))
             response = searchCountry(country)
             if response:
                 try:
-                    bot.sendPhoto(chat_id, flag, caption=response)
+                    bot.sendPhoto(chat_id, getFlag(removerAcentosECaracteresEspeciais(response[1])), caption=response[0])
                 except:
-                    bot.sendPhoto(chat_id, getOtherFlag(removerAcentosECaracteresEspeciais(country)), caption=response)
+                    bot.sendPhoto(chat_id, getOtherFlag(removerAcentosECaracteresEspeciais(response[1])), caption=response[0])
                 else:
-                    bot.sendPhoto(chat_id, getOtherFlag2(removerAcentosECaracteresEspeciais(country)), caption=response)
+                        bot.sendPhoto(chat_id, getOtherFlag2(removerAcentosECaracteresEspeciais(response[1])), caption=response[0])
             else:
                 bot.sendMessage(chat_id, notRecognized)
+
+        if splittedMsg[0] == "/r":
+            newlist = []
+            final = "\n"
+            if splittedMsg[1].find("-"):
+                newlist = sorted(requestAll(), key=itemgetter('cases'), reverse=True)
+                cinco = newlist[:abs(int(splittedMsg[1]))]
+                for i in cinco:
+                    if i["countryInfo"]["iso2"]:
+                        final += flag.flag(i["countryInfo"]["iso2"]) + " " +str(i["country"]) +":  "+ str(i["cases"]) + "\n"
+                    else:
+                        final += "NA " +str(i["country"]) +":  "+ str(i["cases"]) + "\n"
+                    
+            else:
+                newlist = sorted(requestAll(), key=itemgetter('cases'), reverse=False)
+                cinco = newlist[:abs(int(splittedMsg[1]))]
+                for i in cinco:
+                    if i["countryInfo"]["iso2"]:
+                        final += flag.flag(i["countryInfo"]["iso2"]) + " " + str(i["country"]) +":  "+ str(i["cases"]) + "\n"
+                    else:
+                        final +=  "NA " + str(i["country"]) +":  "+ str(i["cases"]) + "\n"
+               
+
+            bot.sendMessage(chat_id, "*Covid 19 cases raking per country*"+final, parse_mode='Markdown')
 
 bot.message_loop(handle)
