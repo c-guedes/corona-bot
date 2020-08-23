@@ -6,7 +6,7 @@ import time
 from constants import botKey
 from util import hasShouth,removeTypo
 from covidGlobal import requestAll, makeRequest, globalCovid
-from covidBrasil import brazilCovid, searchCountry, getFlag, getOtherFlag, getOtherFlag2
+from covidBrasil import brazilCovid, searchCountry, getFlag, getOtherFlag, getOtherFlag2, somatoria
 
 locale.setlocale(locale.LC_ALL, '') #pega o local da máquina e seta o locale
 
@@ -61,6 +61,9 @@ def handle(msg):
             else:
                 bot.sendMessage(chat_id, notRecognized)
 
+        if splittedMsg[0] == "/brasil":
+            bot.sendMessage(chat_id, somatoria())
+            
         if splittedMsg[0] == "/r":
             newlist = []
             final = "\n"

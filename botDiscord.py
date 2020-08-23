@@ -8,7 +8,7 @@ from discord.ext import commands
 from operator import itemgetter
 import time
 
-token = ""
+token = "Njk2ODA5NjIzNDE1Njg1MTkz.XouJDQ.vWXe4Nx0Ln2OWGet9Mp9ktwn60A"
 
 
 class JsonToObject(object):
@@ -17,11 +17,11 @@ class JsonToObject(object):
 
 
 def makeRequest(lugar):
-    return requests.get("https://corona.lmao.ninja/countries/"+lugar).json()
+    return requests.get("https://corona.lmao.ninja/v2/countries/"+lugar).json()
 
 
 def requestAll():
-    return requests.get("https://corona.lmao.ninja/countries/").json()
+    return requests.get("https://corona.lmao.ninja/v2/countries/").json()
 
 
 def globalCovid(obj):

@@ -13,15 +13,19 @@ locale.setlocale(locale.LC_ALL, '') #pega o local da máquina e seta o locale
 
 def brazilCovid():
     openzada = urllib.request.urlopen(brazilCovidUrl)
-    s = openzada.read().decode('utf-8').replace("var dados = ", "")
-    print(s)
+    s = openzada.read().decode('utf-8').replace("var dados =", "")
     final = JsonToObject(s)
-    print(final)
     return final.features
+
+def somatoria():
+    obj = brazilCovid()
+    objBr = obj[len(obj)-1]['properties']
+    return "Casos confirmados: {confirmedCases}\nObitos: {deaths}".format(confirmedCases= locale.format_string('%d', int(objBr['casosconfirmados']),1), deaths = locale.format_string('%d', int(objBr['obitos']),1))
 
 def searchCountry(lugar):
     obj = brazilCovid()
     for index in range(len(obj)):
+        print(index)
         searchedCountry = removeTypo(
             obj[index]['properties']['estado_geo'])
         toSearch = removeTypo(lugar)
